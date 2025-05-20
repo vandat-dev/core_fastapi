@@ -1,28 +1,38 @@
 from functools import lru_cache
-from typing import Iterator
+from typing import AsyncIterator
 
 import sqlalchemy as sa
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import NullPool
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
 
 from app.core.settings import settings
 
 
 @lru_cache()
-def get_session_maker() -> sessionmaker:
-    engine = sa.create_engine(settings.SQLALCHEMY_DATABASE_URI, poolclass=NullPool)
-    session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+def get_async_session_maker():
+    # Use create_async_engine with the async URI
+    engine = create_async_engine(
+        settings.ASYNC_SQLALCHEMY_DATABASE_URI,
+        echo=False
+    )
+    session_local = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine,
+        class_=AsyncSession
+    )
     return session_local
 
 
-def get_db() -> Iterator[Session]:
-    session_local = get_session_maker()
+async def get_db() -> AsyncIterator[AsyncSession]:
+    """Dependency for getting async database session"""
+    session_local = get_async_session_maker()
     session = session_local()
 
     try:
         yield session
     except Exception as exc:
-        session.rollback()
+        await session.rollback()
         raise exc
     finally:
-        session.close()
+        await session.close()

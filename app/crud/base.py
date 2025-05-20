@@ -3,7 +3,8 @@ from typing import Any, Dict, Generic, List, Optional, Type, TypeVar, Union
 
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.model.base import Base
 
@@ -26,39 +27,49 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         self.model = model
 
-    def get(self, db: Session, entry_id: Any) -> Optional[ModelType]:
+    async def get(self, db: AsyncSession, entry_id: Any) -> Optional[ModelType]:
         try:
-            query_set = db.query(self.model).filter(self.model.id == entry_id)
-            return query_set.first()
+            query = select(self.model).where(self.model.id == entry_id)
+            result = await db.execute(query)
+            return result.scalars().first()
         except Exception as error:
             logger.error("User service: get by ID failed.", exc_info=error)
             return None
 
-    def get_multi(
-            self, db: Session, *, skip: int = None, limit: int = None,
+    async def get_multi(
+            self, db: AsyncSession, *, skip: int = None, limit: int = None,
     ) -> Any:
-        query_set = db.query(self.model)
-        count = query_set.count()
-
+        query = select(self.model)
+        
         if skip is not None and limit is not None:
-            query_set = query_set.offset(skip).limit(limit)
+            result = await db.execute(query.offset(skip).limit(limit))
+            items = result.scalars().all()
+            
+            # Get count
+            count_query = select(self.model)
+            count_result = await db.execute(count_query)
+            count = len(count_result.scalars().all())
+        else:
+            result = await db.execute(query)
+            items = result.scalars().all()
+            count = len(items)
 
-        return query_set.all(), count
+        return items, count
 
-    def create(self, db: Session, *, obj_in: CreateSchemaType) -> ModelType:
+    async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
         logger.info("CRUDBase: create called.")
         obj_in_data = jsonable_encoder(obj_in)
         logger.debug("With: request - %s", obj_in_data)
         db_obj = self.model(**obj_in_data)  # type: ignore
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         logger.info("CRUDBase: create success.")
         return db_obj
 
-    def update(
+    async def update(
             self,
-            db: Session,
+            db: AsyncSession,
             *,
             db_obj: ModelType,
             obj_in: Union[UpdateSchemaType, Dict[str, Any]],
@@ -73,17 +84,19 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
                 setattr(db_obj, field, update_data[field])
 
         db.add(db_obj)
-        db.commit()
-        db.refresh(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
         return db_obj
 
-    def remove(self, db: Session, *, entry_id: str) -> ModelType:
-        obj = db.query(self.model).get(entry_id)
-        db.delete(obj)
-        db.commit()
+    async def remove(self, db: AsyncSession, *, entry_id: str) -> ModelType:
+        query = select(self.model).where(self.model.id == entry_id)
+        result = await db.execute(query)
+        obj = result.scalars().first()
+        await db.delete(obj)
+        await db.commit()
         return obj
 
-    def bulk_save_objects(self, db: Session, obj_ins: List[CreateSchemaType]):
+    async def bulk_save_objects(self, db: AsyncSession, obj_ins: List[CreateSchemaType]):
         logger.info("CRUDBase: bulk_save_objects called.")
         objects = []
 
@@ -93,7 +106,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             objects.append(db_obj)
 
         if objects:
-            db.bulk_save_objects(objects)
-            db.flush()
+            db.add_all(objects)
+            await db.commit()
 
         logger.info("CRUDBase: bulk_save_objects called success.")

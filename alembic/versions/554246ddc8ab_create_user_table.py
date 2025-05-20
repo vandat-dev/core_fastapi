@@ -10,7 +10,6 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 
-
 # revision identifiers, used by Alembic.
 revision: str = '554246ddc8ab'
 down_revision: Union[str, None] = None
@@ -19,15 +18,13 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_table('user',
-                    sa.Column('id', sa.String(length=255), nullable=False),
-                    sa.Column('username', sa.String(length=255), nullable=False),
-                    sa.Column('full_name', sa.String(length=255), nullable=True),
-                    sa.Column('phone', sa.String(length=255), nullable=True),
-                    sa.Column('email', sa.String(length=255), nullable=False),
-                    sa.PrimaryKeyConstraint('id')
-                    )
+    op.create_table(
+        'test_user',
+        sa.Column('id', sa.Integer, primary_key=True, autoincrement=True),
+        sa.Column('username', sa.String(length=255), nullable=False),
+        sa.Column('email', sa.String(length=255), nullable=False)
+    )
 
 
 def downgrade() -> None:
-    op.drop_table('user')
+    op.drop_table('test_user')

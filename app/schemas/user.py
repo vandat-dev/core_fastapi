@@ -8,11 +8,9 @@ from pydantic import BaseModel
 
 
 class UserBase(BaseModel):
-    id: Optional[str] = None
+    id: Optional[int] = None
     username: Optional[str] = None
     email: Optional[str] = None
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
 
     class Config:
         orm_mode = True
@@ -25,21 +23,18 @@ class UserCreateParams(BaseModel):
 
 class UserUpdateParams(BaseModel):
     username: Optional[str] = None
-    full_name: Optional[str] = None
-    phone: Optional[str] = None
 
 
 class UserCreate(BaseModel):
-    id: str
+    id: int
     email: str
     username: str
 
 
 class UserUpdate(BaseModel):
-    id: Optional[str] = None
+    id: Optional[int] = None
     username: Optional[str] = None
     full_name: Optional[str] = None
-    phone: Optional[str] = None
 
 
 class LoginUser(BaseModel):
@@ -48,10 +43,9 @@ class LoginUser(BaseModel):
 
 
 class UserInfo(BaseModel):
-    id: str
+    id: int
     username: Optional[str] = None
     email: Optional[str] = None
-    phone: Optional[str] = None
 
     class Config:
         allow_population_by_field_name = True
@@ -62,5 +56,5 @@ class UserResponse(UserBase):
     class Config:
         orm_mode = True
         json_encoders = {
-            datetime: lambda v: int(v.timestamp())
+            datetime: lambda v: str(v.timestamp())
         }

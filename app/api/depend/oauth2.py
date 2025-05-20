@@ -109,37 +109,6 @@ def get_current_active_user(
     return current_user
 
 
-def seedling_company(
-        current_user: model.User = Depends(get_current_user)
-) -> model.User:
-    if current_user.system_role not in [UserSystemRole.SEEDLING_COMPANY, UserSystemRole.ADMIN,
-                                        UserSystemRole.SUPPER_ADMIN]:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail=AppStatus.ERROR_INVALID_ROLE.meta)
-
-    return current_user
-
-
-def farmer(
-        current_user: model.User = Depends(get_current_user)
-) -> model.User:
-    if current_user.system_role not in [UserSystemRole.FARMER, UserSystemRole.ADMIN, UserSystemRole.SUPPER_ADMIN]:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail=AppStatus.ERROR_INVALID_ROLE.meta)
-
-    return current_user
-
-
-def manufacturer(
-        current_user: model.User = Depends(get_current_user)
-) -> model.User:
-    if current_user.system_role not in [UserSystemRole.MANUFACTURER, UserSystemRole.ADMIN,
-                                        UserSystemRole.SUPPER_ADMIN]:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail=AppStatus.ERROR_INVALID_ROLE.meta)
-
-    return current_user
-
 def admin(
         current_user: model.User = Depends(get_current_user)
 ) -> model.User:
